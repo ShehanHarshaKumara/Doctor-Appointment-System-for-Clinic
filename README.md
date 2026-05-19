@@ -1,2 +1,11 @@
-# Doctor-Appointment-System-for-Clinic
-A modern and smart clinic management system developed to streamline doctor appointments, patient records, staff operations, and clinic administration. This system helps clinics efficiently manage daily medical activities through a secure multi-panel web application.
+
+  # Patient website redesign
+
+  This is a code bundle for Patient website redesign. The original project is available at https://www.figma.com/design/r2XgJCeINXyyiaGkQYRJ31/Patient-website-redesign.
+
+  ## Running the code
+
+  Run `npm i` to install the dependencies.
+
+  Run `npm run dev` to start the development server.
+  
