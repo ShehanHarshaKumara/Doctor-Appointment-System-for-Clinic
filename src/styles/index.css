@@ -1,3 +1,67 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+.auth-page-backdrop {
+  background:
+    linear-gradient(132deg, rgba(3, 18, 31, 0.96), rgba(10, 74, 83, 0.9) 44%, rgba(231, 248, 246, 0.95)),
+    url("https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=1800&auto=format&fit=crop") center / cover;
+  position: relative;
+}
+
+.auth-page-backdrop::before {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 72px 72px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.68), transparent 72%);
+  pointer-events: none;
+  position: absolute;
+}
+
+.auth-page-backdrop > * {
+  position: relative;
+}
+
+.auth-form-backdrop {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(235, 246, 250, 0.96)),
+    linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(56, 189, 248, 0.08));
+}
+
+@keyframes auth-form-swap {
+  from {
+    opacity: 0;
+    transform: translate3d(18px, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.auth-form-swap {
+  animation: auth-form-swap 280ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-form-swap {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-page-backdrop {
+    background:
+      linear-gradient(180deg, rgba(4, 24, 39, 0.98), rgba(7, 72, 79, 0.92) 35%, rgba(232, 248, 247, 0.98) 35%),
+      url("https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=1200&auto=format&fit=crop") center / cover;
+  }
+
+  .auth-page-backdrop::before {
+    background-size: 48px 48px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.52), transparent 45%);
+  }
+}
