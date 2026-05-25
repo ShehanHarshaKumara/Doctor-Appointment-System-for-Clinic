@@ -27,7 +27,9 @@ import {
   loadUser,
   Role,
   saveSession,
+  SESSION_EXPIRED_EVENT,
   User,
+  updateStoredUser,
 } from './lib/api';
 import { roleDestinationLabel, roleLabel } from './lib/roles';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -48,6 +50,32 @@ export default function App() {
   const [page, setPage] = useState<Page>(() => loadUser() ? 'dashboard' : 'login');
   const [user, setUser] = useState<User | null>(() => loadUser());
   const [loginRole, setLoginRole] = useState<Role>('patient');
+
+  useEffect(() => {
+    const handleExpiredSession = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: string }>).detail?.message;
+      clearSession();
+      setUser(null);
+      setPage('login');
+      toast.error(message ?? 'Please sign in again.');
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpiredSession);
+
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpiredSession);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    api<{ user: User }>('/auth/me')
+      .then((result) => setUser(result.user))
+      .catch(() => {
+        clearSession();
+        setUser(null);
+        setPage('login');
+      });
+  }, []);
 
   const navigate = (next: Page, role?: Role) => {
     if (role) setLoginRole(role);
@@ -91,7 +119,10 @@ export default function App() {
           setUser(nextUser);
           setPage('dashboard');
         }} />}
-        {page === 'dashboard' && (user ? <Dashboard user={user} logout={logout} /> : <StandaloneLoginPage role={loginRole} setRole={setLoginRole} initialMode="login" onLogin={(nextUser) => {
+        {page === 'dashboard' && (user ? <Dashboard user={user} logout={logout} onUserChanged={(nextUser) => {
+          updateStoredUser(nextUser);
+          setUser(nextUser);
+        }} /> : <StandaloneLoginPage role={loginRole} setRole={setLoginRole} initialMode="login" onLogin={(nextUser) => {
           setUser(nextUser);
           setPage('dashboard');
         }} onRegister={(nextUser) => {
@@ -464,7 +495,7 @@ function PatientRegisterForm({ onRegister }: { onRegister: (user: User) => void 
   );
 }
 
-function Dashboard({ user, logout }: { user: User; logout: () => void }) {
+function Dashboard({ user, logout, onUserChanged }: { user: User; logout: () => void; onUserChanged: (user: User) => void }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [refreshKey, setRefreshKey] = useState(0);
@@ -482,6 +513,7 @@ function Dashboard({ user, logout }: { user: User; logout: () => void }) {
         appointments={appointments}
         logout={logout}
         onChanged={() => setRefreshKey((key) => key + 1)}
+        onProfileChanged={onUserChanged}
       />
     );
   }

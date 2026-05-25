@@ -14,12 +14,21 @@ class MedicineController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('generic_name', 'like', "%{$search}%")
-                ->orWhere('category', 'like', "%{$search}%");
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('medicine_no', 'like', "%{$search}%")
+                    ->orWhere('generic_name', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('supplier', 'like', "%{$search}%");
+            });
         }
 
         return response()->json(['medicines' => $query->limit(100)->get()]);
+    }
+
+    public function show(Medicine $medicine)
+    {
+        return response()->json(['medicine' => $medicine]);
     }
 
     public function store(Request $request)
@@ -40,6 +49,13 @@ class MedicineController extends Controller
         $medicine->update($data + ['status' => $this->statusFor($data + $medicine->toArray())]);
 
         return response()->json(['medicine' => $medicine]);
+    }
+
+    public function destroy(Medicine $medicine)
+    {
+        $medicine->delete();
+
+        return response()->noContent();
     }
 
     private function validated(Request $request, bool $partial = false): array

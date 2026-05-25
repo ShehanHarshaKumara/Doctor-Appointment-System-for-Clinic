@@ -7,7 +7,9 @@ use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -78,6 +80,46 @@ class AuthController extends Controller
         $request->user()->forceFill(['api_token_hash' => null])->save();
 
         return response()->json(['message' => 'Logged out.']);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'profile_image' => ['nullable', 'image', 'max:4096'],
+            'current_password' => ['nullable', 'required_with:password', 'string'],
+            'password' => ['nullable', 'confirmed', Password::min(8)],
+        ]);
+
+        if (! empty($data['password']) && ! Hash::check($data['current_password'] ?? '', $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect.'], 422);
+        }
+
+        if ($request->hasFile('profile_image')) {
+            if ($user->profile_image_path) {
+                Storage::disk('public')->delete($user->profile_image_path);
+            }
+
+            $user->profile_image_path = $request->file('profile_image')->store('users/profile-images', 'public');
+        }
+
+        $user->name = $data['name'];
+        $user->email = $data['email'];
+        $user->phone = $data['phone'] ?? null;
+
+        if (! empty($data['password'])) {
+            $user->password = $data['password'];
+        }
+
+        $user->save();
+
+        return response()->json([
+            'user' => $user->fresh()->load(['patient', 'doctor', 'staff']),
+        ]);
     }
 
     private function issueToken(User $user, int $status = 200)

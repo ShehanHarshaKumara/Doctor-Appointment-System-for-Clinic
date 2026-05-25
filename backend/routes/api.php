@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\StaffController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -13,6 +15,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::middleware('api.auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/profile', [AuthController::class, 'updateProfile'])
+            ->middleware('role:admin');
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 });
@@ -32,10 +36,21 @@ Route::middleware('api.auth')->group(function () {
         ->middleware('role:admin');
 
     Route::apiResource('/patients', PatientController::class)
-        ->only(['index', 'store', 'update', 'destroy'])
+        ->only(['index', 'show', 'store', 'update', 'destroy'])
         ->middleware('role:admin,staff');
 
     Route::apiResource('/medicines', MedicineController::class)
-        ->only(['index', 'store', 'update'])
+        ->only(['index', 'show', 'store', 'update', 'destroy'])
         ->middleware('role:admin,staff');
+
+    Route::get('/users', [UserController::class, 'index'])
+        ->middleware('role:admin');
+
+    Route::apiResource('/doctors', DoctorController::class)
+        ->only(['show', 'store', 'update', 'destroy'])
+        ->middleware('role:admin');
+
+    Route::apiResource('/staff', StaffController::class)
+        ->only(['index', 'show', 'store', 'update', 'destroy'])
+        ->middleware('role:admin');
 });

@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api';
+export const SESSION_EXPIRED_EVENT = 'clinic-session-expired';
 
 export type Role = 'admin' | 'doctor' | 'staff' | 'patient';
 
@@ -7,6 +8,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
+  profile_image_url?: string | null;
   role: Role;
   patient?: Patient | null;
   doctor?: Doctor | null;
@@ -15,12 +17,26 @@ export interface User {
 
 export interface Doctor {
   id: number;
+  doctor_no?: string;
   full_name: string;
   specialization: string;
+  phone?: string;
   qualification?: string;
   bio?: string;
   channel_fee: string;
+  is_active?: boolean;
   availability?: Record<string, string[]>;
+  user?: Pick<User, 'id' | 'name' | 'email' | 'phone' | 'role'> & { is_active?: boolean };
+}
+
+export interface Staff {
+  id: number;
+  staff_no: string;
+  full_name: string;
+  position: string;
+  permissions?: string[];
+  is_active?: boolean;
+  user?: Pick<User, 'id' | 'name' | 'email' | 'phone' | 'role'> & { is_active?: boolean };
 }
 
 export interface Patient {
@@ -29,6 +45,24 @@ export interface Patient {
   full_name: string;
   phone: string;
   email?: string;
+  date_of_birth?: string;
+  gender?: string;
+  address?: string;
+  blood_type?: string;
+  allergies?: string;
+  emergency_contact?: string;
+  profile_image_url?: string;
+  documents?: PatientDocument[];
+  created_at?: string;
+}
+
+export interface PatientDocument {
+  id: number;
+  name: string;
+  mime_type?: string;
+  size: number;
+  url?: string;
+  created_at?: string;
 }
 
 export interface Appointment {
@@ -48,12 +82,17 @@ export interface Medicine {
   id: number;
   medicine_no: string;
   name: string;
+  generic_name?: string;
   category?: string;
+  dosage_form?: string;
   stock_qty: number;
   low_stock_threshold: number;
   unit_price: string;
   expiry_date?: string;
+  supplier?: string;
   status: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 function token() {
@@ -65,7 +104,16 @@ export function saveSession(authToken: string, user: User) {
   localStorage.setItem('clinic_user', JSON.stringify(user));
 }
 
+export function updateStoredUser(user: User) {
+  localStorage.setItem('clinic_user', JSON.stringify(user));
+}
+
 export function loadUser(): User | null {
+  if (!token()) {
+    localStorage.removeItem('clinic_user');
+    return null;
+  }
+
   const raw = localStorage.getItem('clinic_user');
   return raw ? JSON.parse(raw) : null;
 }
@@ -95,7 +143,16 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = payload.message ?? 'Request failed';
+    let message = payload.message ?? 'Request failed';
+
+    if (response.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/register')) {
+      message = 'Your session expired. Please sign in again.';
+      clearSession();
+      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, {
+        detail: { message },
+      }));
+    }
+
     throw new Error(message);
   }
 

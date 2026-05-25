@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('api_token_hash')->nullable()->index();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('view_password')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

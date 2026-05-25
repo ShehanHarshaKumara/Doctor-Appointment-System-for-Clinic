@@ -4,17 +4,24 @@ import {
   BadgeCheck,
   Bell,
   Calendar,
+  ChevronsLeft,
+  ChevronsRight,
   ClipboardList,
   Clock3,
   HeartPulse,
   LayoutDashboard,
   LogOut,
+  Menu,
+  X,
   Package,
   Pill,
   Search,
+  Settings,
   Shield,
   Stethoscope,
   TrendingUp,
+  UserRoundCog,
+  UserRoundPlus,
   Users,
 } from 'lucide-react';
 import {
@@ -32,17 +39,35 @@ import {
 import { toast } from 'sonner';
 import { api, Appointment, Medicine, User } from '../../lib/api';
 import { AdminAppointmentsPage } from './AdminAppointmentsPage';
+import { AdminDoctorsPage } from './AdminDoctorsPage';
+import { AdminMedicinesPage } from './AdminMedicinesPage';
+import { AdminPatientsPage } from './AdminPatientsPage';
+import { AdminProfilePage } from './AdminProfilePage';
+import { AdminStaffPage } from './AdminStaffPage';
 
 const statusOptions = ['pending', 'confirmed', 'arrived', 'in_progress', 'completed', 'cancelled', 'no_show'];
 
-export function AdminDashboard({ user, summary, appointments, logout, onChanged }: {
+type AdminUser = Pick<User, 'id' | 'name' | 'email' | 'phone' | 'role'> & {
+  is_active: boolean;
+  created_at: string;
+};
+
+export function AdminDashboard({ user, summary, appointments, logout, onChanged, onProfileChanged }: {
   user: User;
   summary: Record<string, number>;
   appointments: Appointment[];
   logout: () => void;
   onChanged: () => void;
+  onProfileChanged: (user: User) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'patients' | 'doctors' | 'medicines' | 'access'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'patients' | 'doctors' | 'staff' | 'medicines' | 'access' | 'profile'>('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const openTab = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setMobileSidebarOpen(false);
+  };
 
   const adminMetrics = [
     ['Patients', summary.total_patients ?? 0, Users, 'Patient records'],
@@ -56,28 +81,50 @@ export function AdminDashboard({ user, summary, appointments, logout, onChanged 
 
   return (
     <section className="min-h-dvh w-full overflow-x-hidden bg-[#f5f5f9] text-[#384551]">
-      <div className="grid min-h-dvh w-full min-w-0 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="min-w-0 overflow-hidden border-b border-[#e6e7ef] bg-white px-3 py-3 shadow-sm sm:px-4 sm:py-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r lg:px-5">
-          <div className="flex items-center gap-3 px-1 sm:px-2">
-            <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#696cff] text-white shadow-lg shadow-indigo-200">
-              <HeartPulse className="h-6 w-6" />
-            </span>
-            <span>
-              <strong className="block text-xl text-[#566a7f]">CAMS</strong>
-              <span className="block text-xs font-semibold uppercase text-[#a1acb8]">Admin Console</span>
-            </span>
+      <div className={`grid min-h-dvh w-full min-w-0 transition-[grid-template-columns] duration-300 ${sidebarCollapsed ? 'lg:grid-cols-[88px_minmax(0,1fr)]' : 'lg:grid-cols-[260px_minmax(0,1fr)]'}`}>
+        <aside className={`min-w-0 overflow-hidden border-b border-[#e6e7ef] bg-white px-3 py-3 shadow-sm transition-all duration-300 sm:px-4 sm:py-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r ${sidebarCollapsed ? 'lg:px-3' : 'lg:px-5'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className={`flex items-center gap-3 px-1 sm:px-2 ${sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#696cff] text-white shadow-lg shadow-indigo-200">
+                <HeartPulse className="h-6 w-6" />
+              </span>
+              <span className={sidebarCollapsed ? 'lg:hidden' : ''}>
+                <strong className="block text-xl text-[#566a7f]">CAMS</strong>
+                <span className="block text-xs font-semibold uppercase text-[#a1acb8]">Admin Console</span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen((open) => !open)}
+              className="grid h-11 w-11 place-items-center rounded-xl border border-[#eceef5] bg-[#fcfdff] text-[#697a8d] hover:bg-[#f5f5f9] lg:hidden"
+              title={mobileSidebarOpen ? 'Close menu' : 'Open menu'}
+            >
+              {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
 
-          <nav className="mt-3 flex w-full min-w-0 max-w-full gap-2 overflow-x-auto pb-1 sm:mt-6 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:mt-8 lg:grid-cols-1">
-            <AdminNavItem active={activeTab === 'dashboard'} icon={<LayoutDashboard className="h-5 w-5" />} label="Dashboard" onClick={() => setActiveTab('dashboard')} />
-            <AdminNavItem active={activeTab === 'appointments'} icon={<Calendar className="h-5 w-5" />} label="Appointments" onClick={() => setActiveTab('appointments')} />
-            <AdminNavItem active={activeTab === 'patients'} icon={<Users className="h-5 w-5" />} label="Patients" onClick={() => setActiveTab('patients')} />
-            <AdminNavItem active={activeTab === 'doctors'} icon={<Stethoscope className="h-5 w-5" />} label="Doctors" onClick={() => setActiveTab('doctors')} />
-            <AdminNavItem active={activeTab === 'medicines'} icon={<Pill className="h-5 w-5" />} label="Medicines" onClick={() => setActiveTab('medicines')} />
-            <AdminNavItem active={activeTab === 'access'} icon={<Shield className="h-5 w-5" />} label="Access" onClick={() => setActiveTab('access')} />
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            className={`mt-4 hidden min-h-11 items-center rounded-xl border border-[#eceef5] bg-[#fcfdff] px-3 text-sm font-bold text-[#697a8d] hover:bg-[#f5f5f9] lg:flex ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {!sidebarCollapsed && <span>Collapse menu</span>}
+            {sidebarCollapsed ? <ChevronsRight className="h-5 w-5" /> : <ChevronsLeft className="h-5 w-5" />}
+          </button>
+
+          <nav className={`mt-3 w-full min-w-0 max-w-full gap-2 pb-1 sm:mt-6 sm:grid-cols-3 sm:pb-0 lg:mt-6 lg:grid lg:grid-cols-1 ${mobileSidebarOpen ? 'grid' : 'hidden'} sm:grid ${sidebarCollapsed ? 'lg:gap-3' : ''}`}>
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'dashboard'} icon={<LayoutDashboard className="h-5 w-5" />} label="Dashboard" onClick={() => openTab('dashboard')} />
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'appointments'} icon={<Calendar className="h-5 w-5" />} label="Appointments" onClick={() => openTab('appointments')} />
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'patients'} icon={<Users className="h-5 w-5" />} label="Patients" onClick={() => openTab('patients')} />
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'doctors'} icon={<Stethoscope className="h-5 w-5" />} label="Doctors" onClick={() => openTab('doctors')} />
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'staff'} icon={<UserRoundPlus className="h-5 w-5" />} label="Staff" onClick={() => openTab('staff')} />
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'medicines'} icon={<Pill className="h-5 w-5" />} label="Medicines" onClick={() => openTab('medicines')} />
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'access'} icon={<Shield className="h-5 w-5" />} label="Access" onClick={() => openTab('access')} />
+            <AdminNavItem collapsed={sidebarCollapsed} active={activeTab === 'profile'} icon={<Settings className="h-5 w-5" />} label="Profile" onClick={() => openTab('profile')} />
           </nav>
 
-          <div className="mt-6 hidden rounded-2xl bg-[#f1f2ff] p-4 text-sm text-[#566a7f] lg:mt-auto lg:block">
+          <div className={`mt-6 hidden rounded-2xl bg-[#f1f2ff] p-4 text-sm text-[#566a7f] lg:mt-auto ${sidebarCollapsed ? 'lg:hidden' : 'lg:block'}`}>
             <p className="font-bold text-[#696cff]">Clinic status</p>
             <p className="mt-2 leading-6">Role-based panels are connected to the Laravel clinic API.</p>
           </div>
@@ -92,8 +139,10 @@ export function AdminDashboard({ user, summary, appointments, logout, onChanged 
                 {activeTab === 'appointments' && 'Search and schedule appointments'}
                 {activeTab === 'patients' && 'Patients central directory'}
                 {activeTab === 'doctors' && 'Practitioner schedules and availability'}
+                {activeTab === 'staff' && 'Staff accounts and front desk permissions'}
                 {activeTab === 'medicines' && 'Medicine inventory and thresholds'}
                 {activeTab === 'access' && 'Security roles and credentials'}
+                {activeTab === 'profile' && 'Admin profile and account settings'}
               </span>
             </label>
             <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3 sm:justify-end">
@@ -101,8 +150,8 @@ export function AdminDashboard({ user, summary, appointments, logout, onChanged 
                 <Bell className="h-5 w-5" />
               </button>
               <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-[#f5f5f9] px-3 py-2 sm:flex-none">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#71dd37] font-bold text-white">
-                  {user.name.charAt(0)}
+                <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#71dd37] font-bold text-white">
+                  {user.profile_image_url ? <img src={user.profile_image_url} alt="Admin profile" className="h-full w-full object-cover" /> : user.name.charAt(0)}
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold text-[#566a7f]">{user.name}</span>
@@ -175,42 +224,27 @@ export function AdminDashboard({ user, summary, appointments, logout, onChanged 
           )}
 
           {activeTab === 'patients' && (
-            <PlaceholderTab
-              icon={<Users className="h-14 w-14 text-[#696cff]" />}
-              title="Patients Registry"
-              description="Review registered medical card logs, contact credentials, and history files."
-            />
+            <AdminPatientsPage onChanged={onChanged} />
           )}
 
           {activeTab === 'doctors' && (
-            <PlaceholderTab
-              icon={<Stethoscope className="h-14 w-14 text-[#696cff]" />}
-              title="Practitioner Rosters"
-              description="Organize professional shifts, qualifications, and specializations."
-            />
+            <AdminDoctorsPage onChanged={onChanged} />
+          )}
+
+          {activeTab === 'staff' && (
+            <AdminStaffPage onChanged={onChanged} />
           )}
 
           {activeTab === 'medicines' && (
-            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(350px,0.85fr)] animate-fade-in">
-              <div className="rounded-2xl bg-white p-5 shadow-[0_2px_6px_rgba(67,89,113,0.12)]">
-                <h3 className="text-lg font-bold text-[#566a7f] mb-3">Medicine Stock Control</h3>
-                <p className="text-sm leading-relaxed text-[#697a8d]">
-                  Use the quick-add widget to insert new inventory items. The system keeps tracking of stocks dynamically to display warnings when medicines drop below safety limits.
-                </p>
-                <div className="mt-6 flex h-48 items-center justify-center rounded-2xl border border-dashed border-[#d9dee3] text-[#a1acb8]">
-                  <p className="text-xs font-semibold uppercase">Advanced Ledger View Coming Soon</p>
-                </div>
-              </div>
-              <AdminTools onChanged={onChanged} />
-            </div>
+            <AdminMedicinesPage onChanged={onChanged} />
           )}
 
           {activeTab === 'access' && (
-            <PlaceholderTab
-              icon={<Shield className="h-14 w-14 text-[#696cff]" />}
-              title="Clinic Security & Access"
-              description="Modify roles, access levels, passwords, and API permissions."
-            />
+            <AdminUsers />
+          )}
+
+          {activeTab === 'profile' && (
+            <AdminProfilePage user={user} onProfileChanged={onProfileChanged} />
           )}
         </div>
       </div>
@@ -241,11 +275,15 @@ function HeroSignal({ icon, label, value, tone }: {
   );
 }
 
-function AdminNavItem({ active = false, icon, label, onClick }: { active?: boolean; icon: React.ReactNode; label: string; onClick?: () => void }) {
+function AdminNavItem({ active = false, collapsed = false, icon, label, onClick }: { active?: boolean; collapsed?: boolean; icon: React.ReactNode; label: string; onClick?: () => void }) {
   return (
-    <button onClick={onClick} className={`flex w-full min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-bold sm:min-h-12 sm:gap-3 sm:px-4 sm:text-sm ${active ? 'bg-[#696cff] text-white shadow-lg shadow-indigo-100' : 'text-[#697a8d] hover:bg-[#f5f5f9]'}`}>
+    <button
+      onClick={onClick}
+      title={label}
+      className={`flex w-full min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-bold sm:min-h-12 sm:gap-3 sm:px-4 sm:text-sm ${collapsed ? 'lg:justify-center lg:px-0' : ''} ${active ? 'bg-[#696cff] text-white shadow-lg shadow-indigo-100' : 'text-[#697a8d] hover:bg-[#f5f5f9]'}`}
+    >
       {icon}
-      <span>{label}</span>
+      <span className={collapsed ? 'lg:hidden' : ''}>{label}</span>
     </button>
   );
 }
@@ -508,6 +546,103 @@ function AdminTools({ onChanged }: { onChanged: () => void }) {
       </div>
     </div>
   );
+}
+
+function AdminUsers() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+
+  useEffect(() => {
+    api<{ users: AdminUser[] }>('/users').then((data) => setUsers(data.users)).catch(() => undefined);
+  }, []);
+
+  return (
+    <div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-[0_2px_6px_rgba(67,89,113,0.12)]">
+      <div className="flex flex-col gap-3 border-b border-[#eceef5] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-bold text-[#696cff]">Access control</p>
+          <h2 className="mt-1 text-xl font-bold text-[#566a7f]">User accounts</h2>
+          <p className="mt-1 text-sm text-[#a1acb8]">Passwords stay hashed and are never shown in admin views.</p>
+        </div>
+        <span className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#eef0ff] px-3 text-sm font-bold text-[#696cff]">
+          <UserRoundCog className="h-5 w-5" />
+          {users.length} users
+        </span>
+      </div>
+
+      <div className="grid gap-3 p-4 md:hidden">
+        {users.map((user) => (
+          <div key={user.id} className="rounded-xl border border-[#eceef5] bg-[#fcfdff] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block truncate font-bold text-[#566a7f]">{user.name}</span>
+                <span className="block break-all text-sm text-[#697a8d]">{user.email}</span>
+              </span>
+              <RoleBadge role={user.role} />
+            </div>
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <AccountFact label="Phone" value={user.phone ?? 'Not set'} />
+              <AccountFact label="Status" value={user.is_active ? 'Active' : 'Inactive'} />
+              <AccountFact label="Password" value="Protected hash" />
+              <AccountFact label="Created" value={formatAdminDate(user.created_at)} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[840px] text-left text-sm">
+          <thead className="bg-[#f5f5f9] text-xs font-bold uppercase text-[#a1acb8]">
+            <tr>
+              <th className="px-5 py-4">User</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Password</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id} className="border-t border-[#eceef5]">
+                <td className="px-5 py-4 font-bold text-[#566a7f]">{user.name}</td>
+                <td className="break-all pr-3 text-[#697a8d]">{user.email}</td>
+                <td className="pr-3">{user.phone ?? 'Not set'}</td>
+                <td className="pr-3"><RoleBadge role={user.role} /></td>
+                <td className="pr-3">
+                  <span className={`rounded-lg px-2 py-1 text-xs font-bold ${user.is_active ? 'bg-[#e8fadf] text-[#5bbf22]' : 'bg-[#fff0ed] text-[#ff3e1d]'}`}>
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td className="pr-3">
+                  <span className="rounded-lg bg-[#eef0ff] px-2 py-1 text-xs font-bold text-[#696cff]">Protected hash</span>
+                </td>
+                <td className="pr-5 text-[#697a8d]">{formatAdminDate(user.created_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {users.length === 0 && <p className="px-5 py-8 text-center text-[#a1acb8]">No user accounts loaded.</p>}
+    </div>
+  );
+}
+
+function RoleBadge({ role }: { role: AdminUser['role'] }) {
+  return <span className="rounded-lg bg-[#f5f5f9] px-2 py-1 text-xs font-bold capitalize text-[#566a7f]">{role}</span>;
+}
+
+function AccountFact({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="rounded-xl bg-white px-3 py-2">
+      <span className="block text-[11px] font-bold uppercase text-[#a1acb8]">{label}</span>
+      <span className="block break-words font-semibold text-[#566a7f]">{value}</span>
+    </span>
+  );
+}
+
+function formatAdminDate(value: string) {
+  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function PlaceholderTab({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
