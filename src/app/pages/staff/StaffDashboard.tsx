@@ -21,12 +21,13 @@ import { StaffProfilePage } from './pages/StaffProfilePage';
 
 type StaffTab = 'dashboard' | 'appointments' | 'patients' | 'medicines' | 'payments' | 'profile';
 
-export function StaffDashboard({ user, summary, appointments, onChanged, onUserChanged }: {
+export function StaffDashboard({ user, summary, appointments, onChanged, onUserChanged, logout }: {
   user: User;
   summary: Record<string, number>;
   appointments: Appointment[];
   onChanged: () => void;
   onUserChanged?: (user: User) => void;
+  logout: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<StaffTab>('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,6 +78,14 @@ export function StaffDashboard({ user, summary, appointments, onChanged, onUserC
             <StaffNavItem active={activeTab === 'medicines'} icon={<Pill className="h-5 w-5" />} label="Medicines" onClick={() => openTab('medicines')} />
             <StaffNavItem active={activeTab === 'payments'} icon={<CreditCard className="h-5 w-5" />} label="Payments" onClick={() => openTab('payments')} />
             <StaffNavItem active={activeTab === 'profile'} icon={<UserCog className="h-5 w-5" />} label="Profile" onClick={() => openTab('profile')} />
+            <button
+              type="button"
+              onClick={logout}
+              className="flex min-h-12 w-full items-center gap-3 rounded-xl bg-[#fff0ed] px-4 text-left text-sm font-bold text-[#ff3e1d] hover:bg-[#ffe4dd] lg:hidden"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
+            </button>
           </nav>
 
           <div className="mt-6 hidden rounded-2xl bg-[#e8fbf7] p-4 text-sm text-[#566a7f] lg:block">
@@ -86,10 +95,14 @@ export function StaffDashboard({ user, summary, appointments, onChanged, onUserC
           </div>
 
           <div className="mt-4 hidden rounded-2xl border border-[#eceef5] bg-white p-4 text-sm text-[#697a8d] lg:block">
-            <span className="inline-flex items-center gap-2 font-bold text-[#566a7f]">
+            <button
+              type="button"
+              onClick={logout}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#fff0ed] px-3 font-bold text-[#ff3e1d] hover:bg-[#ffe4dd]"
+            >
               <LogOut className="h-4 w-4" />
-              Use top logout
-            </span>
+              Logout
+            </button>
             <p className="mt-2 leading-6">Staff access is limited to front desk workflows.</p>
           </div>
         </aside>

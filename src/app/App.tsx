@@ -524,6 +524,7 @@ function Dashboard({ user, logout, onUserChanged }: { user: User; logout: () => 
     appointments,
     onChanged: () => setRefreshKey((key) => key + 1),
     onUserChanged,
+    logout,
   };
 
   if (user.role === 'patient') return <PatientDashboard {...rolePageProps} />;
