@@ -16,7 +16,7 @@ Route::prefix('auth')->group(function () {
     Route::middleware('api.auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/profile', [AuthController::class, 'updateProfile'])
-            ->middleware('role:admin');
+            ->middleware('role:admin,staff');
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 });

@@ -99,8 +99,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <Toaster position="top-right" richColors />
-      {user && user.role !== 'admin' && <Header user={user} page={page} navigate={navigate} logout={logout} />}
-      <main className={user && user.role !== 'admin' ? 'pt-16' : ''}>
+      {user && !['admin', 'staff'].includes(user.role) && <Header user={user} page={page} navigate={navigate} logout={logout} />}
+      <main className={user && !['admin', 'staff'].includes(user.role) ? 'pt-16' : ''}>
         {page === 'home' && <Home navigate={navigate} />}
         {page === 'doctors' && <DoctorsPage />}
         {page === 'services' && <ServicesPage />}
@@ -523,6 +523,7 @@ function Dashboard({ user, logout, onUserChanged }: { user: User; logout: () => 
     summary,
     appointments,
     onChanged: () => setRefreshKey((key) => key + 1),
+    onUserChanged,
   };
 
   if (user.role === 'patient') return <PatientDashboard {...rolePageProps} />;

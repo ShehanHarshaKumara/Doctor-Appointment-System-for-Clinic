@@ -119,6 +119,29 @@ class ClinicApiTest extends TestCase
         ])->assertOk();
     }
 
+    public function test_staff_can_update_own_profile(): void
+    {
+        Storage::fake('public');
+        $staff = $this->loginAs('staff@clinic.test', 'staff');
+
+        $response = $this->withToken($staff)
+            ->post('/api/auth/profile', [
+                'name' => 'Updated Staff Member',
+                'email' => 'staff.updated@clinic.test',
+                'phone' => '0771000088',
+                'profile_image' => UploadedFile::fake()->createWithContent(
+                    'staff.png',
+                    base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aL0AAAAASUVORK5CYII=')
+                ),
+            ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('user.name', 'Updated Staff Member')
+            ->assertJsonPath('user.email', 'staff.updated@clinic.test')
+            ->assertJsonStructure(['user' => ['profile_image_url']]);
+
+        Storage::disk('public')->assertExists(User::findOrFail($response->json('user.id'))->profile_image_path);
+    }
+
     public function test_admin_can_manage_patient_details_and_report(): void
     {
         Storage::fake('public');
