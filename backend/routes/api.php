@@ -16,7 +16,7 @@ Route::prefix('auth')->group(function () {
     Route::middleware('api.auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/profile', [AuthController::class, 'updateProfile'])
-            ->middleware('role:admin,staff');
+            ->middleware('role:admin,staff,doctor,patient');
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 });
@@ -40,7 +40,11 @@ Route::middleware('api.auth')->group(function () {
         ->middleware('role:admin,staff');
 
     Route::apiResource('/medicines', MedicineController::class)
-        ->only(['index', 'show', 'store', 'update', 'destroy'])
+        ->only(['index', 'show'])
+        ->middleware('role:admin,staff,doctor,patient');
+
+    Route::apiResource('/medicines', MedicineController::class)
+        ->only(['store', 'update', 'destroy'])
         ->middleware('role:admin,staff');
 
     Route::get('/users', [UserController::class, 'index'])

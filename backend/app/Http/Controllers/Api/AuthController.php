@@ -117,6 +117,14 @@ class AuthController extends Controller
 
         $user->save();
 
+        if ($user->role === 'patient' && $user->patient) {
+            $user->patient->forceFill([
+                'full_name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? $user->patient->phone,
+            ])->save();
+        }
+
         return response()->json([
             'user' => $user->fresh()->load(['patient', 'doctor', 'staff']),
         ]);

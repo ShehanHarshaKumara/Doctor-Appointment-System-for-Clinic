@@ -142,6 +142,69 @@ class ClinicApiTest extends TestCase
         Storage::disk('public')->assertExists(User::findOrFail($response->json('user.id'))->profile_image_path);
     }
 
+    public function test_doctor_can_view_medicines_and_update_profile(): void
+    {
+        Storage::fake('public');
+        $doctor = $this->loginAs('doctor@clinic.test', 'doctor');
+
+        $this->withToken($doctor)
+            ->getJson('/api/medicines')
+            ->assertOk()
+            ->assertJsonStructure(['medicines' => [['id', 'medicine_no', 'name', 'stock_qty', 'status']]]);
+
+        $this->withToken($doctor)
+            ->postJson('/api/medicines', ['name' => 'Doctor Should Not Create'])
+            ->assertForbidden();
+
+        $response = $this->withToken($doctor)
+            ->post('/api/auth/profile', [
+                'name' => 'Dr. Updated Profile',
+                'email' => 'doctor.updated@clinic.test',
+                'phone' => '0772000099',
+                'profile_image' => UploadedFile::fake()->createWithContent(
+                    'doctor.png',
+                    base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aL0AAAAASUVORK5CYII=')
+                ),
+            ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('user.name', 'Dr. Updated Profile')
+            ->assertJsonPath('user.email', 'doctor.updated@clinic.test')
+            ->assertJsonStructure(['user' => ['profile_image_url']]);
+
+        Storage::disk('public')->assertExists(User::findOrFail($response->json('user.id'))->profile_image_path);
+    }
+
+    public function test_patient_can_view_medicines_and_update_own_profile(): void
+    {
+        Storage::fake('public');
+        $patient = $this->loginAs('patient@clinic.test', 'patient');
+
+        $this->withToken($patient)
+            ->getJson('/api/medicines')
+            ->assertOk()
+            ->assertJsonStructure(['medicines' => [['id', 'medicine_no', 'name', 'stock_qty', 'status']]]);
+
+        $response = $this->withToken($patient)
+            ->post('/api/auth/profile', [
+                'name' => 'Updated Patient Profile',
+                'email' => 'patient.updated@clinic.test',
+                'phone' => '0773000099',
+                'profile_image' => UploadedFile::fake()->createWithContent(
+                    'patient.png',
+                    base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aL0AAAAASUVORK5CYII=')
+                ),
+            ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('user.name', 'Updated Patient Profile')
+            ->assertJsonPath('user.email', 'patient.updated@clinic.test')
+            ->assertJsonPath('user.patient.full_name', 'Updated Patient Profile')
+            ->assertJsonPath('user.patient.email', 'patient.updated@clinic.test')
+            ->assertJsonPath('user.patient.phone', '0773000099')
+            ->assertJsonStructure(['user' => ['profile_image_url']]);
+
+        Storage::disk('public')->assertExists(User::findOrFail($response->json('user.id'))->profile_image_path);
+    }
+
     public function test_admin_can_manage_patient_details_and_report(): void
     {
         Storage::fake('public');

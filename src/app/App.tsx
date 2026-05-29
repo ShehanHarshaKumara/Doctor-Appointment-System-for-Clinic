@@ -8,16 +8,20 @@ import {
   Clock3,
   Eye,
   EyeOff,
+  FileText,
   HeartPulse,
+  House,
   LockKeyhole,
   LogOut,
   Mail,
+  Menu,
   Pill,
   Shield,
   Stethoscope,
   UserRound,
   UserPlus,
   Users,
+  X,
 } from 'lucide-react';
 import {
   api,
@@ -31,13 +35,20 @@ import {
   User,
   updateStoredUser,
 } from './lib/api';
-import { roleDestinationLabel, roleLabel } from './lib/roles';
+import { roleLabel } from './lib/roles';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
 import { PatientDashboard } from './pages/patient/PatientDashboard';
+import {
+  PatientDoctorsPage,
+  PatientHomePage,
+  PatientMedicinesPage,
+  PatientProfilePage,
+  PatientReportsPage,
+} from './pages/patient/PatientPages';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 
-type Page = 'home' | 'doctors' | 'services' | 'contact' | 'login' | 'register' | 'dashboard';
+type Page = 'home' | 'doctors' | 'services' | 'contact' | 'login' | 'register' | 'dashboard' | 'patient-home' | 'patient-doctors' | 'patient-appointment' | 'patient-medicine' | 'patient-reports' | 'patient-profile';
 
 const demoAccounts = [
   ['Patient', 'patient@clinic.test'],
@@ -47,9 +58,18 @@ const demoAccounts = [
 ];
 
 export default function App() {
-  const [page, setPage] = useState<Page>(() => loadUser() ? 'dashboard' : 'login');
   const [user, setUser] = useState<User | null>(() => loadUser());
+  const [page, setPage] = useState<Page>(() => {
+    const storedUser = loadUser();
+    if (!storedUser) return 'login';
+    return storedUser.role === 'patient' ? 'patient-home' : 'dashboard';
+  });
   const [loginRole, setLoginRole] = useState<Role>('patient');
+
+  const completeAuth = (nextUser: User) => {
+    setUser(nextUser);
+    setPage(nextUser.role === 'patient' ? 'patient-home' : 'dashboard');
+  };
 
   useEffect(() => {
     const handleExpiredSession = (event: Event) => {
@@ -99,36 +119,42 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <Toaster position="top-right" richColors />
-      {user && !['admin', 'staff'].includes(user.role) && <Header user={user} page={page} navigate={navigate} logout={logout} />}
-      <main className={user && !['admin', 'staff'].includes(user.role) ? 'pt-16' : ''}>
+      {user && user.role === 'patient' && <Header user={user} page={page} navigate={navigate} logout={logout} />}
+      <main className={user && user.role === 'patient' ? 'pt-24 sm:pt-28' : ''}>
         {page === 'home' && <Home navigate={navigate} />}
         {page === 'doctors' && <DoctorsPage />}
         {page === 'services' && <ServicesPage />}
         {page === 'contact' && <ContactPage />}
-        {page === 'login' && <StandaloneLoginPage role={loginRole} setRole={setLoginRole} initialMode="login" onLogin={(nextUser) => {
-          setUser(nextUser);
-          setPage('dashboard');
-        }} onRegister={(nextUser) => {
-          setUser(nextUser);
-          setPage('dashboard');
-        }} />}
-        {page === 'register' && <StandaloneLoginPage role="patient" setRole={setLoginRole} initialMode="register" onLogin={(nextUser) => {
-          setUser(nextUser);
-          setPage('dashboard');
-        }} onRegister={(nextUser) => {
-          setUser(nextUser);
-          setPage('dashboard');
-        }} />}
+        {page === 'login' && <StandaloneLoginPage role={loginRole} setRole={setLoginRole} initialMode="login" onLogin={completeAuth} onRegister={completeAuth} />}
+        {page === 'register' && <StandaloneLoginPage role="patient" setRole={setLoginRole} initialMode="register" onLogin={completeAuth} onRegister={completeAuth} />}
         {page === 'dashboard' && (user ? <Dashboard user={user} logout={logout} onUserChanged={(nextUser) => {
           updateStoredUser(nextUser);
           setUser(nextUser);
-        }} /> : <StandaloneLoginPage role={loginRole} setRole={setLoginRole} initialMode="login" onLogin={(nextUser) => {
+        }} /> : <StandaloneLoginPage role={loginRole} setRole={setLoginRole} initialMode="login" onLogin={completeAuth} onRegister={completeAuth} />)}
+        {user?.role === 'patient' && page === 'patient-home' && <PatientDashboardGate user={user} page="home" onProfileChanged={(nextUser) => {
+          updateStoredUser(nextUser);
           setUser(nextUser);
-          setPage('dashboard');
-        }} onRegister={(nextUser) => {
+        }} />}
+        {user?.role === 'patient' && page === 'patient-doctors' && <PatientDashboardGate user={user} page="doctors" onProfileChanged={(nextUser) => {
+          updateStoredUser(nextUser);
           setUser(nextUser);
-          setPage('dashboard');
-        }} />)}
+        }} />}
+        {user?.role === 'patient' && page === 'patient-appointment' && <PatientDashboardGate user={user} page="appointment" onProfileChanged={(nextUser) => {
+          updateStoredUser(nextUser);
+          setUser(nextUser);
+        }} />}
+        {user?.role === 'patient' && page === 'patient-medicine' && <PatientDashboardGate user={user} page="medicine" onProfileChanged={(nextUser) => {
+          updateStoredUser(nextUser);
+          setUser(nextUser);
+        }} />}
+        {user?.role === 'patient' && page === 'patient-reports' && <PatientDashboardGate user={user} page="reports" onProfileChanged={(nextUser) => {
+          updateStoredUser(nextUser);
+          setUser(nextUser);
+        }} />}
+        {user?.role === 'patient' && page === 'patient-profile' && <PatientDashboardGate user={user} page="profile" onProfileChanged={(nextUser) => {
+          updateStoredUser(nextUser);
+          setUser(nextUser);
+        }} />}
       </main>
     </div>
   );
@@ -140,59 +166,149 @@ function Header({ user, page, navigate, logout }: {
   navigate: (page: Page, role?: Role) => void;
   logout: () => void;
 }) {
-  const publicLinks: [Page, string][] = [
-    ['home', 'Home'],
-    ['doctors', 'Doctors'],
-    ['services', 'Services'],
-    ['contact', 'Contact'],
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const links: { id: Page; label: string; icon: React.ReactNode }[] = [
+    { id: 'patient-home', label: 'Home', icon: <House className="h-4 w-4" /> },
+    { id: 'patient-doctors', label: 'Doctors', icon: <Stethoscope className="h-4 w-4" /> },
+    { id: 'patient-appointment', label: 'Appointment', icon: <Calendar className="h-4 w-4" /> },
+    { id: 'patient-medicine', label: 'Medicine', icon: <Pill className="h-4 w-4" /> },
+    { id: 'patient-reports', label: 'Reports', icon: <FileText className="h-4 w-4" /> },
+    { id: 'patient-profile', label: 'Profile', icon: <UserRound className="h-4 w-4" /> },
   ];
+  const initials = user?.name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'PT';
+
+  const goTo = (next: Page) => {
+    setMobileOpen(false);
+    navigate(next);
+  };
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <button onClick={() => navigate(user ? 'dashboard' : 'login')} className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-600 text-white">
-            <HeartPulse className="h-6 w-6" />
-          </span>
-          <span className="text-left">
-            <span className="block text-lg font-bold">CAMS Clinic</span>
-            <span className="block text-xs text-slate-500">Appointment Management</span>
-          </span>
-        </button>
+    <header className="fixed left-0 right-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
+      <div className="mx-auto w-full max-w-none">
+        <div className="patient-nav-shell flex min-h-[72px] items-center justify-between gap-3 rounded-3xl border border-white/70 bg-white/80 px-3 shadow-2xl shadow-teal-950/10 backdrop-blur-xl sm:px-4">
+          <button onClick={() => goTo(user ? 'patient-home' : 'login')} className="group flex min-w-0 items-center gap-3 rounded-2xl px-1 py-2 text-left">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-slate-950 via-teal-800 to-cyan-500 text-white shadow-lg shadow-teal-900/25 transition group-hover:-translate-y-0.5">
+              <HeartPulse className="h-6 w-6" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-base font-black text-slate-950 sm:text-lg">CAMS Clinic</span>
+              <span className="block truncate text-xs font-bold uppercase text-teal-700">Patient care portal</span>
+            </span>
+          </button>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          {user && publicLinks.map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => navigate(id)}
-              className={`rounded-md px-3 py-2 text-sm font-medium ${page === id ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}
-            >
-              {label}
-            </button>
-          ))}
-          {user ? (
-            <>
-              <button onClick={() => navigate('dashboard')} className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
-                {roleDestinationLabel(user.role)}
+          <nav className="hidden items-center gap-1 rounded-2xl bg-slate-100/80 p-1 xl:flex">
+            {user && links.map(({ id, label, icon }) => (
+              <button
+                key={id}
+                onClick={() => goTo(id)}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 text-sm font-bold transition ${page === id || (id === 'patient-home' && page === 'dashboard') ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/80' : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'}`}
+              >
+                {icon}
+                {label}
               </button>
-              <button onClick={logout} className="rounded-md p-2 text-slate-600 hover:bg-slate-100" title="Logout">
+            ))}
+          </nav>
+
+          {user ? (
+            <div className="hidden items-center gap-3 xl:flex">
+              <button onClick={() => goTo('patient-profile')} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-teal-50 text-sm font-black text-teal-700">
+                  {user.profile_image_url ? <img src={user.profile_image_url} alt="Patient profile" className="h-full w-full object-cover" /> : initials}
+                </span>
+                <span className="max-w-36 text-left">
+                  <span className="block truncate text-sm font-black text-slate-950">{user.name}</span>
+                  <span className="block truncate text-xs font-bold text-slate-500">Patient account</span>
+                </span>
+              </button>
+              <button onClick={logout} className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5 hover:bg-rose-600" title="Logout">
                 <LogOut className="h-5 w-5" />
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <button onClick={() => navigate('register')} className="rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+            <div className="hidden items-center gap-2 xl:flex">
+              <button onClick={() => goTo('register')} className="rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100">
                 Patient Register
               </button>
-              <button onClick={() => navigate('login')} className="rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white">
+              <button onClick={() => goTo('login')} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-950/15">
                 Login
               </button>
-            </>
+            </div>
           )}
-        </nav>
+
+          <button
+            onClick={() => setMobileOpen((open) => !open)}
+            className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/15 xl:hidden"
+            title={mobileOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+
+        {mobileOpen && (
+          <div className="patient-mobile-nav mt-2 rounded-3xl border border-white/70 bg-white/95 p-3 shadow-2xl shadow-slate-950/10 backdrop-blur-xl xl:hidden">
+            <div className="mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+              <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-teal-100 text-sm font-black text-teal-800">
+                {user?.profile_image_url ? <img src={user.profile_image_url} alt="Patient profile" className="h-full w-full object-cover" /> : initials}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-black text-slate-950">{user?.name ?? 'Patient'}</span>
+                <span className="block truncate text-xs font-bold text-slate-500">{user?.email ?? 'Patient account'}</span>
+              </span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {user && links.map(({ id, label, icon }) => (
+                <button
+                  key={id}
+                  onClick={() => goTo(id)}
+                  className={`inline-flex min-h-12 items-center gap-3 rounded-2xl px-4 text-left text-sm font-bold transition ${page === id || (id === 'patient-home' && page === 'dashboard') ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-700 hover:bg-teal-50 hover:text-teal-800'}`}
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
+              <button onClick={logout} className="inline-flex min-h-12 items-center gap-3 rounded-2xl bg-rose-50 px-4 text-left text-sm font-bold text-rose-700 hover:bg-rose-100 sm:col-span-2">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
+}
+
+function PatientDashboardGate({ user, page, onProfileChanged }: {
+  user: User;
+  page: 'home' | 'doctors' | 'appointment' | 'medicine' | 'reports' | 'profile';
+  onProfileChanged?: (user: User) => void;
+}) {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [summary, setSummary] = useState<Record<string, number>>({});
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    api<{ appointments: Appointment[] }>('/appointments').then((data) => setAppointments(data.appointments)).catch((error) => toast.error(error.message));
+    api<{ summary: Record<string, number> }>('/dashboard/summary').then((data) => setSummary(data.summary)).catch(() => undefined);
+  }, [refreshKey]);
+
+  const props = {
+    user,
+    summary,
+    appointments,
+  };
+
+  if (page === 'home') return <PatientHomePage {...props} />;
+  if (page === 'doctors') return <PatientDoctorsPage />;
+  if (page === 'appointment') return <PatientDashboard {...props} onChanged={() => setRefreshKey((key) => key + 1)} />;
+  if (page === 'medicine') return <PatientMedicinesPage />;
+  if (page === 'reports') return <PatientReportsPage {...props} />;
+  return <PatientProfilePage {...props} onProfileChanged={onProfileChanged} />;
 }
 
 function Home({ navigate }: { navigate: (page: Page, role?: Role) => void }) {
@@ -527,7 +643,7 @@ function Dashboard({ user, logout, onUserChanged }: { user: User; logout: () => 
     logout,
   };
 
-  if (user.role === 'patient') return <PatientDashboard {...rolePageProps} />;
+  if (user.role === 'patient') return <PatientHomePage user={user} summary={summary} appointments={appointments} />;
   if (user.role === 'staff') return <StaffDashboard {...rolePageProps} />;
   return <DoctorDashboard {...rolePageProps} />;
 }

@@ -115,7 +115,14 @@ export function loadUser(): User | null {
   }
 
   const raw = localStorage.getItem('clinic_user');
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    clearSession();
+    return null;
+  }
 }
 
 export function clearSession() {
