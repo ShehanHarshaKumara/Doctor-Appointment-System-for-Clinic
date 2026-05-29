@@ -54,6 +54,8 @@
 
 A modern and smart clinic management web application designed to manage doctor appointments, patient records, staff operations, and clinic administration efficiently.
 
+## Hosting Link 
+## https://clinic-appointment-system-silk.vercel.app/
 ## 🚀 Features
 
 - 👨‍⚕️ Doctor appointment booking
