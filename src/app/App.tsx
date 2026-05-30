@@ -599,7 +599,17 @@ function PatientRegisterForm({ onRegister }: { onRegister: (user: User) => void 
         <AuthInput label="Email" value={form.email} onChange={(email) => setForm({ ...form, email })} type="email" autoComplete="email" placeholder="name@example.com" />
         <AuthInput label="Phone" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} type="tel" autoComplete="tel" placeholder="Phone number" />
         <AuthInput label="Date of birth" value={form.date_of_birth} onChange={(date_of_birth) => setForm({ ...form, date_of_birth })} type="date" required={false} />
-        <AuthInput label="Gender" value={form.gender} onChange={(gender) => setForm({ ...form, gender })} required={false} placeholder="Optional" />
+        <AuthSelect
+          label="Gender"
+          value={form.gender}
+          onChange={(gender) => setForm({ ...form, gender })}
+          required={false}
+          options={[
+            { label: 'Select gender', value: '' },
+            { label: 'Male', value: 'Male' },
+            { label: 'Female', value: 'Female' },
+          ]}
+        />
         <AuthInput label="Address" value={form.address} onChange={(address) => setForm({ ...form, address })} required={false} autoComplete="street-address" placeholder="Optional" />
         <AuthInput label="Password" value={form.password} onChange={(password) => setForm({ ...form, password })} type="password" autoComplete="new-password" placeholder="Minimum 8 characters" />
         <AuthInput label="Confirm password" value={form.password_confirmation} onChange={(password_confirmation) => setForm({ ...form, password_confirmation })} type="password" autoComplete="new-password" placeholder="Repeat password" />
@@ -841,6 +851,32 @@ function AuthInput({ label, value, onChange, type = 'text', required = true, aut
         />
         {action && <span className="absolute right-2 top-1/2 -translate-y-1/2">{action}</span>}
       </span>
+    </label>
+  );
+}
+
+function AuthSelect({ label, value, onChange, required = true, options }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  options: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-bold text-slate-900">{label}</span>
+      <select
+        required={required}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-950 outline-none shadow-sm transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
+      >
+        {options.map((option) => (
+          <option key={option.label} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

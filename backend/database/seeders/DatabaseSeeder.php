@@ -29,25 +29,22 @@ class DatabaseSeeder extends Seeder
             'saturday' => ['09:00', '09:30', '10:00', '10:30'],
         ];
 
-        $admin = User::create([
+        User::updateOrCreate(['email' => 'admin@clinic.test'], [
             'name' => 'Clinic Admin',
-            'email' => 'admin@clinic.test',
             'phone' => '0771000001',
             'role' => 'admin',
             'password' => 'password123',
         ]);
 
-        $staffUser = User::create([
+        $staffUser = User::updateOrCreate(['email' => 'staff@clinic.test'], [
             'name' => 'Reception Staff',
-            'email' => 'staff@clinic.test',
             'phone' => '0771000002',
             'role' => 'staff',
             'password' => 'password123',
         ]);
 
-        Staff::create([
+        Staff::updateOrCreate(['staff_no' => 'ST-2026-0001'], [
             'user_id' => $staffUser->id,
-            'staff_no' => 'ST-2026-0001',
             'full_name' => 'Reception Staff',
             'position' => 'Receptionist',
             'permissions' => ['patients', 'appointments', 'medicines'],
@@ -60,17 +57,15 @@ class DatabaseSeeder extends Seeder
         ];
 
         $doctors = collect($doctorUsers)->map(function ($doctor, $index) use ($slots) {
-            $user = User::create([
+            $user = User::updateOrCreate(['email' => $doctor[1]], [
                 'name' => $doctor[0],
-                'email' => $doctor[1],
                 'phone' => '077200000'.($index + 1),
                 'role' => 'doctor',
                 'password' => 'password123',
             ]);
 
-            return Doctor::create([
+            return Doctor::updateOrCreate(['doctor_no' => sprintf('DR-2026-%04d', $index + 1)], [
                 'user_id' => $user->id,
-                'doctor_no' => sprintf('DR-2026-%04d', $index + 1),
                 'full_name' => $doctor[0],
                 'specialization' => $doctor[2],
                 'phone' => $user->phone,
@@ -81,17 +76,15 @@ class DatabaseSeeder extends Seeder
             ]);
         });
 
-        $patientUser = User::create([
+        $patientUser = User::updateOrCreate(['email' => 'patient@clinic.test'], [
             'name' => 'Demo Patient',
-            'email' => 'patient@clinic.test',
             'phone' => '0773000001',
             'role' => 'patient',
             'password' => 'password123',
         ]);
 
-        $patient = Patient::create([
+        $patient = Patient::updateOrCreate(['patient_no' => 'PT-2026-00001'], [
             'user_id' => $patientUser->id,
-            'patient_no' => 'PT-2026-00001',
             'full_name' => 'Demo Patient',
             'phone' => $patientUser->phone,
             'email' => $patientUser->email,
@@ -103,8 +96,7 @@ class DatabaseSeeder extends Seeder
             'emergency_contact' => '0773999999',
         ]);
 
-        $walkIn = Patient::create([
-            'patient_no' => 'PT-2026-00002',
+        $walkIn = Patient::updateOrCreate(['patient_no' => 'PT-2026-00002'], [
             'full_name' => 'Walk-in Patient',
             'phone' => '0773000002',
             'email' => 'walkin@example.test',
@@ -112,8 +104,7 @@ class DatabaseSeeder extends Seeder
             'address' => 'Kandy',
         ]);
 
-        Appointment::create([
-            'appointment_no' => 'APT-'.now()->format('Ymd').'-0001',
+        Appointment::updateOrCreate(['appointment_no' => 'APT-'.now()->format('Ymd').'-0001'], [
             'patient_id' => $patient->id,
             'doctor_id' => $doctors[0]->id,
             'booked_by' => $patientUser->id,
@@ -123,8 +114,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'pending',
         ]);
 
-        Appointment::create([
-            'appointment_no' => 'APT-'.now()->addDay()->format('Ymd').'-0001',
+        Appointment::updateOrCreate(['appointment_no' => 'APT-'.now()->addDay()->format('Ymd').'-0001'], [
             'patient_id' => $walkIn->id,
             'doctor_id' => $doctors[1]->id,
             'booked_by' => $staffUser->id,
@@ -134,7 +124,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'confirmed',
         ]);
 
-        Medicine::insert([
+        collect([
             [
                 'medicine_no' => 'MED-2026-0001',
                 'name' => 'Paracetamol',
@@ -165,6 +155,9 @@ class DatabaseSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-        ]);
+        ])->each(fn (array $medicine) => Medicine::updateOrCreate(
+            ['medicine_no' => $medicine['medicine_no']],
+            $medicine
+        ));
     }
 }
